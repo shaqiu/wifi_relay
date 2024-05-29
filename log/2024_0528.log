@@ -1,0 +1,61 @@
+[LIB]--------------------------------------------------------------------------------
+[LIB]                       EJTech RTK Relay Server v1.0
+[LIB]
+[LIB]--------------------------------------------------------------------------------
+[LIB]IP Address:           Network Adapter Name:
+[LIB]--------------------------------------------------------------------------------
+[LIB]192.168.100.100       Realtek PCIe GbE Family Controller
+[LIB]192.168.35.86         802.11n USB Wireless LAN Card
+[LIB]0.0.0.0               Microsoft Wi-Fi Direct Virtual Adapter
+[LIB]0.0.0.0               Microsoft Wi-Fi Direct Virtual Adapter #2
+[LIB]
+[LIB]--------------------------------------------------------------------------------
+[LIB]SERVER_IF: Realtek PCIe GbE Family Controller
+[LIB]SERVER_IP: 192.168.100.100
+[LIB]SOCKET_FD: 220
+[LIB]--------------------------------------------------------------------------------
+[LIB]CLIENT_IP:       TYPE:    DEV_NAME:       SOCKET_FD:  REMOTE_PORT:  RTK_STATUS:
+[LIB]192.168.100.200  BASE     EJB0_590043     332         7348          0x7
+[LIB]192.168.100.201  ROVER    EJR0_39001C     292         63429         0x1
+[LIB]--------------------------------------------------------------------------------
+[LIB]SERVER RECV 360 BYTE, from BASE
+[LIB]SERVER SEND 348 BYTE to 2 ROVERS
+[LIB]--------------------------------------------------------------------------------
+[LIB]--------------------------------------------------------------------------------
+[LIB]                       EJTech RTK Relay Server v1.0
+[LIB]
+[LIB]--------------------------------------------------------------------------------
+[LIB]IP Address:           Network Adapter Name:
+[LIB]--------------------------------------------------------------------------------
+[LIB]192.168.100.100       Realtek PCIe GbE Family Controller
+[LIB]192.168.35.86         802.11n USB Wireless LAN Card
+[LIB]0.0.0.0               Microsoft Wi-Fi Direct Virtual Adapter
+[LIB]0.0.0.0               Microsoft Wi-Fi Direct Virtual Adapter #2
+[LIB]
+[LIB]--------------------------------------------------------------------------------
+[LIB]SERVER_IF: Realtek PCIe GbE Family Controller
+[LIB]SERVER_IP: 192.168.100.100
+[LIB]SOCKET_FD: 220
+[LIB]--------------------------------------------------------------------------------
+[LIB]CLIENT_IP:       TYPE:    DEV_NAME:       SOCKET_FD:  REMOTE_PORT:  RTK_STATUS:
+[LIB]192.168.100.200  BASE     EJB0_590043     332         7348          0x7
+[LIB]192.168.100.201  ROVER    EJR0_39001C     292         63429         0x1
+[LIB]--------------------------------------------------------------------------------
+[LIB]SERVER RECV 329 BYTE, from BASE
+[LIB]SERVER SEND 317 BYTE to 2 ROVERS
+[LIB]--------------------------------------------------------------------------------
+app_add_client:L73
+app_add_client:L85
+app_add_client:L85
+app_add_client:L85
+app_add_client:L85
+app_add_client:L85
+app_add_client:L85
+app_add_client:L73
+api_get_client_data:L389
+api_get_client_data:L400
+api_get_client_data:L406
+api_get_client_data:L400
+Segmentation fault
+
+
