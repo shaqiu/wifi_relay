@@ -116,7 +116,13 @@ struct client_info {
 /*  */
 /********************************************************************************/
 struct client_info *g_client_head = NULL;
+struct client_info g_client_meta; // empty node for head
 struct server_info g_server_info;
+
+// reset linked list head with a new client
+void reset_head_and_meta(struct client_info* client) {
+    g_client_meta.next = g_client_head = client;
+}
 
 
 /********************************************************************************/
@@ -125,25 +131,39 @@ struct server_info g_server_info;
 void add_client(struct client_info *new_client)
 {
 	pthread_mutex_lock(&mutex);
-	struct client_info *curr = g_client_head;
-	struct client_info *prev = NULL;
 
-	while (curr != NULL) {
+    // check if new_client is NULL or new_client is the first client
+    if (new_client == NULL || g_client_head == NULL) {
+        reset_head_and_meta(new_client);
+        pthread_mutex_unlock(&mutex);
+        return;
+    }
+
+	struct client_info *curr = g_client_head;
+	struct client_info *prev = &g_client_meta;
+
+    // check if the new_client is already in the list
+    // if so, remove it and replace with new_client
+    // if not, add new_client to the end of the list
+	for ( ; curr != NULL; curr = curr->next, prev = prev->next) {
 		if (strcmp(curr->ip, new_client->ip) == 0 && strcmp(curr->dev_name, new_client->dev_name) == 0) {
-			if (prev == NULL)
-				g_client_head = curr->next;
-			else
-				prev->next = curr->next;
+            // remove curr and replace with new_client
+			new_client->next = curr->next;
+            prev->next = new_client;
+
+            // reset g_client_head if curr is the head
+            if (curr == g_client_head) {
+                reset_head_and_meta(new_client);
+            }
+
+            // destruct curr
 			close(curr->socket);
 			free(curr);
+
 			break;
 		}
-		prev = curr;
-		curr = curr->next;
 	}
 
-	new_client->next = g_client_head;
-	g_client_head = new_client;
 	pthread_mutex_unlock(&mutex);
 }
 
@@ -151,26 +171,34 @@ void add_client(struct client_info *new_client)
 /********************************************************************************/
 /* Remove a client from the linked list */
 /********************************************************************************/
-void remove_client(int socket)
+void remove_client(int s)
 {
 	pthread_mutex_lock(&mutex);
-	struct client_info *curr = g_client_head;
-	struct client_info *prev = NULL;
 
-	while (curr != NULL) {
-		if (curr->socket == socket) {
-			if (prev == NULL)
-				g_client_head = curr->next;
-			else
-				prev->next = curr->next;
+	struct client_info *curr = g_client_head;
+	struct client_info *prev = &g_client_meta;
+
+    // check if the new_client is already in the list
+    // if so, remove it and replace with new_client
+    // if not, add new_client to the end of the list
+	for ( ; curr != NULL; curr = curr->next, prev = prev->next) {
+		if (curr->socket == s) {
+            // remove curr and replace with new_client
+			prev->next = curr->next;
+
+            // reset g_client_head if curr is the head
+            if (curr == g_client_head) {
+                reset_head_and_meta(curr->next); // cur->next is new head if curr is removed
+            }
+
+            // destruct curr
 			close(curr->socket);
 			free(curr);
-			pthread_mutex_unlock(&mutex);
-			return;
+
+			break;
 		}
-		prev = curr;
-		curr = curr->next;
 	}
+
 	pthread_mutex_unlock(&mutex);
 }
 
