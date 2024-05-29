@@ -1,23 +1,22 @@
 /*
-step1. lib 디렉토리로 이동하여 공유 라이브러리 생성:
+步骤1. 进入lib目录并生成共享库：
 
-	cd lib
-	make
+    cd lib
+    make
 
-step2. app 디렉토리로 이동하여 실행 파일 생성:
+步骤2. 进入app目录并生成可执行文件：
 
-	cd ../app
-	make
+    cd ../app
+    make
 
-step3. 실행
-	main.exe 와 mylib.dll 이 같은 디렉토리에 위치하도록 하거나,
-	mylib.dll을 시스템 PATH 에 포함시킨 후 main.exe 를 실행하면 된다.
+步骤3. 运行
+    确保main.exe和mylib.dll位于同一目录中，或者将mylib.dll添加到系统PATH中，然后运行main.exe。
 
-	NOTE:
-		먼저 Windows OS 의 [네트워크 카드] 속성 설정에서 IP 주소를 설정해야 한다.
+    注意：
+        首先在Windows操作系统的[网络适配器]属性设置中配置IP地址。
 
-		$ ./relay_server.exe 9101 "Intel(R) Wi-Fi 6E AX211 160MHz"
-		$ ./relay_server.exe 9101 Intel\(R\)\ Wi-Fi\ 6E\ AX211\ 160MHz
+        $ ./relay_server.exe 9101 "Intel(R) Wi-Fi 6E AX211 160MHz"
+        $ ./relay_server.exe 9101 Intel\(R\)\ Wi-Fi\ 6E\ AX211\ 160MHz
 */
 
 #include <stdio.h>
