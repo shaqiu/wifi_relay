@@ -7,6 +7,7 @@
  ** SERVER	---> 	ROVER:
  **
  */
+#include "linked_list.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -109,60 +110,63 @@ struct client_info {
 	char cs;				/*  */
 	//uint8_t etx[2];			/* index Z~Z+1 (2 byte, fix값: "\r\n") */
 
-	struct client_info *next;
+	// struct client_info *next;
 };
 
-/********************************************************************************/
-/*  */
-/********************************************************************************/
-struct client_info *g_client_head = NULL;
-struct client_info g_client_meta; // empty node for head
+struct LinkedList* g_client_meta = NULL;
 struct server_info g_server_info;
 
-// reset linked list head with a new client
-void reset_head_and_meta(struct client_info* client) {
-    g_client_meta.next = g_client_head = client;
+struct ThreadArgs {
+    struct client_info *client;
+    struct LinkedList* list_meta;
+};
+
+int Is_IP_and_name_same(void* l_data, void* r_data)
+{
+    struct client_info * l_struct = (struct client_info *)l_data;
+    struct client_info * r_struct = (struct client_info *)r_data;
+
+    if (strcmp(l_struct->dev_name, r_struct->dev_name) == 0 && strcmp(l_struct->ip, r_struct->ip) == 0)
+    {
+        return 1;
+    }
+
+    return 0;
 }
 
+int Is_socket_same(void* l_data, void* pFd)
+{
+    struct client_info * client = (struct client_info *)l_data;
+    int fd = *(int*)pFd;
+
+    if (client->socket == fd)
+    {
+        return 1;
+    }
+
+    return 0;
+}
 
 /********************************************************************************/
 /* Add a new client to the linked list, removing any existing client with the same IP and device name */
 /********************************************************************************/
-void add_client(struct client_info *new_client)
+void add_client(struct LinkedList* list_meta, struct client_info *new_client)
 {
 	pthread_mutex_lock(&mutex);
 
     // check if new_client is NULL or new_client is the first client
-    if (new_client == NULL || g_client_head == NULL) {
-        reset_head_and_meta(new_client);
+    if (new_client == NULL ) {
         pthread_mutex_unlock(&mutex);
         return;
     }
 
-	struct client_info *curr = g_client_head;
-	struct client_info *prev = &g_client_meta;
-
-    // check if the new_client is already in the list
-    // if so, remove it and replace with new_client
-    // if not, add new_client to the end of the list
-	for ( ; curr != NULL; curr = curr->next, prev = prev->next) {
-		if (strcmp(curr->ip, new_client->ip) == 0 && strcmp(curr->dev_name, new_client->dev_name) == 0) {
-            // remove curr and replace with new_client
-			new_client->next = curr->next;
-            prev->next = new_client;
-
-            // reset g_client_head if curr is the head
-            if (curr == g_client_head) {
-                reset_head_and_meta(new_client);
-            }
-
-            // destruct curr
-			close(curr->socket);
-			free(curr);
-
-			break;
-		}
-	}
+    void* to_delete = Add_to_linked_list_if(list_meta, new_client, Is_IP_and_name_same);
+    struct client_info* to_delete_client = (struct client_info*)to_delete;
+    if (to_delete_client != NULL)
+    {
+        close(to_delete_client->socket);
+        free(to_delete_client);
+    }
 
 	pthread_mutex_unlock(&mutex);
 }
@@ -171,68 +175,58 @@ void add_client(struct client_info *new_client)
 /********************************************************************************/
 /* Remove a client from the linked list */
 /********************************************************************************/
-void remove_client(int s)
+void remove_client(struct LinkedList* list_meta, int s)
 {
 	pthread_mutex_lock(&mutex);
 
-	struct client_info *curr = g_client_head;
-	struct client_info *prev = &g_client_meta;
-
-    // check if the new_client is already in the list
-    // if so, remove it and replace with new_client
-    // if not, add new_client to the end of the list
-	for ( ; curr != NULL; curr = curr->next, prev = prev->next) {
-		if (curr->socket == s) {
-            // remove curr and replace with new_client
-			prev->next = curr->next;
-
-            // reset g_client_head if curr is the head
-            if (curr == g_client_head) {
-                reset_head_and_meta(curr->next); // cur->next is new head if curr is removed
-            }
-
-            // destruct curr
-			close(curr->socket);
-			free(curr);
-
-			break;
-		}
-	}
+	void* to_delete = Delete_from_linked_list_if(list_meta, &s, Is_socket_same);
+    struct client_info* to_delete_client = (struct client_info*)to_delete;
+    if (to_delete_client != NULL)
+    {
+        close(to_delete_client->socket);
+        free(to_delete_client);
+    }
 
 	pthread_mutex_unlock(&mutex);
+}
+
+// Clean up function for linked list
+void CleanClient(void* data) {
+    struct client_info* client = (struct client_info*)data;
+    if (client != NULL)
+    {
+        close(client->socket);
+        free(client);
+    }
 }
 
 /********************************************************************************/
 /* Clean up linked list */
 /********************************************************************************/
-void free_list(void)
+void free_list(struct LinkedList* list_meta)
 {
 	pthread_mutex_lock(&mutex);
-	struct client_info *curr = g_client_head;
-	while (curr != NULL) {
-		struct client_info *temp = curr;
-		curr = curr->next;
-		close(temp->socket);
-		free(temp);
-	}
+
+    Free_linked_list(list_meta, CleanClient);
+
 	pthread_mutex_unlock(&mutex);
 }
 
-/********************************************************************************/
-/* Find a client in the linked list by socket */
-/********************************************************************************/
-struct client_info *find_client(int socket)
-{
-	pthread_mutex_lock(&mutex);
-	struct client_info *curr = g_client_head;
-	while (curr != NULL) {
-		if (curr->socket == socket)
-			return curr;
-		curr = curr->next;
-	}
-	pthread_mutex_unlock(&mutex);
-	return NULL;
-}
+// /********************************************************************************/
+// /* Find a client in the linked list by socket */
+// /********************************************************************************/
+// struct client_info *find_client(int socket)
+// {
+// 	pthread_mutex_lock(&mutex);
+// 	struct client_info *curr = g_client_head;
+// 	while (curr != NULL) {
+// 		if (curr->socket == socket)
+// 			return curr;
+// 		curr = curr->next;
+// 	}
+// 	pthread_mutex_unlock(&mutex);
+// 	return NULL;
+// }
 
 /********************************************************************************/
 /* Print all clients in the linked list */
@@ -240,8 +234,10 @@ struct client_info *find_client(int socket)
 int print_all_clients()
 {
 	volatile int r_cnt = 0;
-	struct client_info *curr = g_client_head;
-	while (curr != NULL) {
+    struct LinkedList* node = g_client_meta->next;
+	struct client_info *curr = NULL;
+	while (node != NULL) {
+        curr = (struct client_info *) node->data;
 		printf("%-16s %-8s %-15s 0x%-12lX  %-5d     %-7d\n",
 				curr->ip,
 				STR_THREAD_TYPE[curr->type],
@@ -254,7 +250,7 @@ int print_all_clients()
 		if (curr->type == EN_ROVER)
 			r_cnt++;
 
-		curr = curr->next;
+		node = node->next;
 	}
 	return r_cnt;
 }
@@ -349,9 +345,9 @@ static int create_rover_rtcm_pkt_2_send(struct client_info *client)
 	int total_len= idx_cs + 3;
 
 	/* scan linked list to relay rtcm */
-	struct client_info *curr = g_client_head;
+	struct LinkedList *curr = g_client_meta->next;
 	while (curr != NULL) {
-		struct client_info *temp = curr;
+		struct client_info *temp = (struct client_info *)(curr->data);
 
 		/* 일반적으로 닫힌 소켓의 fd는 -1로 설정된다 */
 		if (temp->type == EN_ROVER && temp->socket != -1) {
@@ -485,7 +481,10 @@ static enum EN_PACKET_TYPE check_packet_type(struct client_info *client, const c
 /********************************************************************************/
 static void *client_thread(void *arg)
 {
-	struct client_info *client = (struct client_info *)arg;
+	struct ThreadArgs *thread_args = (struct ThreadArgs *)arg;
+    struct client_info *client = thread_args->client;
+    struct LinkedList* list_meta = thread_args->list_meta;
+
 	char buffer[BUFFER_SIZE];
 	pthread_t tid = pthread_self();
 
@@ -526,7 +525,7 @@ static void *client_thread(void *arg)
 			/* Client disconnected */
 			printf("[0x%lX] Client type %s disconnected\n", tid, STR_THREAD_TYPE[client->type]);
 
-			remove_client(client->socket);
+			remove_client(list_meta, client->socket);
 
 			/* NOTE: thrad 종료되기전에 출력해야 한다 */
 			print_status(client->type, r_len, w_len);
@@ -555,6 +554,9 @@ int main(int argc, char *argv[])
 	socklen_t addr_size = sizeof(client_addr);
 	struct ifreq ifr;
 	char buffer[BUFFER_SIZE] = {0};
+
+    struct LinkedList* list_meta = Init_linked_list();
+    g_client_meta = list_meta;
 
 	/* Create server socket */
 	server_socket = socket(AF_INET, SOCK_STREAM, 0);
@@ -633,11 +635,15 @@ int main(int argc, char *argv[])
 		/* Default: Unknown type */
 		new_client->type = EN_UNKNOW;
 		new_client->address = client_addr;
-		new_client->next = NULL;
+		// new_client->next = NULL;
 		strcpy(new_client->ip, inet_ntoa(client_addr.sin_addr));
 
+        struct ThreadArgs thread_args;
+        thread_args.client = new_client;
+        thread_args.list_meta = list_meta;
+
 		/* Create a new thread for the client */
-		if (pthread_create(&new_client->thread, NULL, client_thread, new_client) != 0) {
+		if (pthread_create(&new_client->thread, NULL, client_thread, &thread_args) != 0) {
 			perror("Thread creation failed");
 			close(new_socket);
 			free(new_client);
@@ -645,14 +651,14 @@ int main(int argc, char *argv[])
 		}
 
 		/* Add the new client node to the linked list */
-		add_client(new_client);
+		add_client(list_meta, new_client);
 	}
 
 	/* Close server socket */
 	close(server_socket);
 
 	/* Clean up linked list */
-	free_list();
+	free_list(list_meta);
 
 	/* 사용이 끝난 mutex 변수 해제. malloc로 동적으로 선언한 mutex 변수는 free()를 호출하기 전에, 꼭 pthread_mutex_destroy()를 먼저 호출해야한다. */
 	pthread_mutex_destroy(&mutex);
